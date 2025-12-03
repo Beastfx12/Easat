@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRB Dashboard - MetroCheck</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .locked-overlay {
+            position: relative;
+        }
+        .locked-overlay::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            border-radius: 0.5rem;
+            z-index: 10;
+        }
+        .lock-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #4c1d95 100%);
+        }
+        .score-ring {
+            background: conic-gradient(#22c55e calc(var(--score) * 1%), #1e293b calc(var(--score) * 1%));
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div id="app">
+        <nav class="gradient-bg p-4 shadow-lg">
+            <div class="max-w-6xl mx-auto flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                    <span class="text-xl font-bold">MetroCheck</span>
+                </div>
+                <a href="/" class="text-green-400 hover:text-green-300 transition">Back to Home</a>
+            </div>
+        </nav>
+
+        <div id="login-section" class="max-w-md mx-auto mt-16 p-8">
+            <div class="bg-gray-800 rounded-2xl p-8 shadow-2xl border border-gray-700">
+                <h2 class="text-2xl font-bold text-center mb-6">View Your CRB Report</h2>
+                <p class="text-gray-400 text-center mb-8">Enter your phone number to access your credit report</p>
+                
+                <form id="access-form" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Phone Number</label>
+                        <input type="tel" id="phone-input" placeholder="0712345678" 
+                            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white placeholder-gray-400">
+                    </div>
+                    <button type="submit" 
+                        class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition duration-200 flex items-center justify-center space-x-2">
+                        <span>Access Dashboard</span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                        </svg>
+                    </button>
+                </form>
+                
+                <div id="error-message" class="mt-4 p-4 bg-red-900/50 border border-red-700 rounded-lg hidden">
+                    <p class="text-red-300 text-sm"></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="dashboard-section" class="hidden max-w-6xl mx-auto p-6">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold">CRB Dashboard</h1>
+                    <p class="text-gray-400 mt-1">Your comprehensive credit report</p>
+                </div>
+                <div id="package-badge" class="px-4 py-2 rounded-full text-sm font-semibold"></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-300">Credit Score</h3>
+                                <p id="credit-score" class="text-5xl font-bold text-green-400 mt-2">---</p>
+                                <p id="score-status" class="text-gray-400 mt-1">Loading...</p>
+                            </div>
+                            <div class="w-24 h-24 score-ring p-2" style="--score: 0">
+                                <div class="w-full h-full bg-gray-800 rounded-full flex items-center justify-center">
+                                    <span class="text-sm text-gray-400">/ 850</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                            <div class="flex items-center space-x-3 mb-3">
+                                <div class="w-10 h-10 bg-blue-900/50 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="font-semibold">CRB Status</h4>
+                            </div>
+                            <p id="crb-status" class="text-xl font-bold">---</p>
+                        </div>
+
+                        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                            <div class="flex items-center space-x-3 mb-3">
+                                <div class="w-10 h-10 bg-green-900/50 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="font-semibold">Loan Eligibility</h4>
+                            </div>
+                            <p id="loan-eligibility" class="text-sm text-gray-300">---</p>
+                        </div>
+                    </div>
+
+                    <div id="credit-history-section" class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold">Credit History (12 Months)</h3>
+                            <span id="history-badge" class="px-2 py-1 text-xs rounded-full"></span>
+                        </div>
+                        <div id="credit-history-content" class="space-y-3">
+                        </div>
+                        <div id="credit-history-locked" class="hidden locked-overlay min-h-[200px] bg-gray-700/30 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-700/40 transition" onclick="showGoldenUpgradeModal('history')">
+                            <div class="lock-icon text-center">
+                                <svg class="w-12 h-12 text-yellow-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                                <p class="text-white font-semibold">Premium Feature</p>
+                                <p class="text-gray-300 text-sm mt-1">Click to upgrade to Golden Package</p>
+                                <button class="mt-3 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg text-sm font-semibold transition">
+                                    Upgrade Now - KES 499
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="detailed-analysis-section" class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold">Detailed Credit Analysis</h3>
+                            <span id="analysis-badge" class="px-2 py-1 text-xs rounded-full"></span>
+                        </div>
+                        <div id="detailed-analysis-content" class="grid grid-cols-2 gap-4">
+                        </div>
+                        <div id="detailed-analysis-locked" class="hidden locked-overlay min-h-[200px] bg-gray-700/30 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-700/40 transition" onclick="showGoldenUpgradeModal('analysis')">
+                            <div class="lock-icon text-center">
+                                <svg class="w-12 h-12 text-yellow-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                                <p class="text-white font-semibold">Premium Feature</p>
+                                <p class="text-gray-300 text-sm mt-1">Click to upgrade to Golden Package</p>
+                                <button class="mt-3 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg text-sm font-semibold transition">
+                                    Upgrade Now - KES 499
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="lender-recommendations-section" class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold">Lender Recommendations</h3>
+                            <span id="lender-badge" class="px-2 py-1 text-xs rounded-full"></span>
+                        </div>
+                        <div id="lender-content" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        </div>
+                        <div id="lender-locked" class="hidden locked-overlay min-h-[200px] bg-gray-700/30 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-700/40 transition" onclick="showGoldenUpgradeModal('recommendations')">
+                            <div class="lock-icon text-center">
+                                <svg class="w-12 h-12 text-yellow-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                                <p class="text-white font-semibold">Golden Premium Feature</p>
+                                <p class="text-gray-300 text-sm mt-1">Click to upgrade to Golden Package</p>
+                                <button class="mt-3 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg text-sm font-semibold transition">
+                                    Upgrade Now - KES 499
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="direct-lenders-section" class="bg-gradient-to-br from-amber-900/30 to-yellow-900/30 rounded-2xl p-6 border border-yellow-600/50">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-yellow-600/30 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-semibold text-yellow-400">Direct Loan Lender Partners</h3>
+                            </div>
+                            <span id="direct-lenders-badge" class="px-2 py-1 text-xs rounded-full bg-yellow-600 text-white">GOLDEN EXCLUSIVE</span>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-4">Connect directly with our verified lending partners for instant loan approval based on your credit profile.</p>
+                        
+                        <div id="direct-lenders-content" class="hidden">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-gray-800/60 rounded-xl p-4 border border-yellow-600/30 hover:border-yellow-500 transition">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-12 h-12 bg-green-600/20 rounded-full flex items-center justify-center">
+                                                <span class="text-xl font-bold text-green-400">M</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-semibold text-white">M-Shwari</h4>
+                                                <p class="text-xs text-gray-400">Instant Mobile Loans</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded-full">Pre-approved</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm mb-3">
+                                        <span class="text-gray-400">Up to KES 50,000</span>
+                                        <span class="text-green-400">7.5%/month</span>
+                                    </div>
+                                    <button onclick="connectToLender('mshwari')" class="w-full py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition">
+                                        Connect Now
+                                    </button>
+                                </div>
+                                
+                                <div class="bg-gray-800/60 rounded-xl p-4 border border-yellow-600/30 hover:border-yellow-500 transition">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-12 h-12 bg-green-600/20 rounded-full flex items-center justify-center">
+                                                <span class="text-xl font-bold text-green-400">F</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-semibold text-white">Fuliza by Safaricom</h4>
+                                                <p class="text-xs text-gray-400">Overdraft Facility</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded-full">Official M-Pesa</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm mb-3">
+                                        <span class="text-gray-400">Up to KES 100,000</span>
+                                        <span class="text-green-400">1%/day</span>
+                                    </div>
+                                    <button onclick="connectToLender('fuliza')" class="w-full py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition">
+                                        Connect Now
+                                    </button>
+                                </div>
+                                
+                                <div class="bg-gray-800/60 rounded-xl p-4 border border-yellow-600/30 hover:border-yellow-500 transition">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-12 h-12 bg-orange-600/20 rounded-full flex items-center justify-center">
+                                                <span class="text-xl font-bold text-orange-400">K</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-semibold text-white">KCB M-Pesa</h4>
+                                                <p class="text-xs text-gray-400">Bank-backed Loans</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 bg-orange-600/20 text-orange-400 text-xs rounded-full">Official Bank</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm mb-3">
+                                        <span class="text-gray-400">Up to KES 1,000,000</span>
+                                        <span class="text-orange-400">1.08%/month</span>
+                                    </div>
+                                    <button onclick="connectToLender('kcb')" class="w-full py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-sm font-medium transition">
+                                        Connect Now
+                                    </button>
+                                </div>
+                                
+                                <div class="bg-gray-800/60 rounded-xl p-4 border border-yellow-600/30 hover:border-yellow-500 transition">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-12 h-12 bg-red-600/20 rounded-full flex items-center justify-center">
+                                                <span class="text-xl font-bold text-red-400">E</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-semibold text-white">Equity EazzyLoan</h4>
+                                                <p class="text-xs text-gray-400">Premium Bank Loans</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 bg-red-600/20 text-red-400 text-xs rounded-full">Premium Bank</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm mb-3">
+                                        <span class="text-gray-400">Up to KES 500,000</span>
+                                        <span class="text-red-400">1.25%/month</span>
+                                    </div>
+                                    <button onclick="connectToLender('equity')" class="w-full py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition">
+                                        Connect Now
+                                    </button>
+                                </div>
+                                
+                                <div class="bg-gray-800/60 rounded-xl p-4 border border-yellow-600/30 hover:border-yellow-500 transition">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-12 h-12 bg-blue-600/20 rounded-full flex items-center justify-center">
+                                                <span class="text-xl font-bold text-blue-400">T</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-semibold text-white">Tala Kenya</h4>
+                                                <p class="text-xs text-gray-400">Fast Approval Loans</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded-full">Verified Partner</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm mb-3">
+                                        <span class="text-gray-400">Up to KES 50,000</span>
+                                        <span class="text-blue-400">15%/month</span>
+                                    </div>
+                                    <button onclick="connectToLender('tala')" class="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition">
+                                        Connect Now
+                                    </button>
+                                </div>
+                                
+                                <div class="bg-gray-800/60 rounded-xl p-4 border border-yellow-600/30 hover:border-yellow-500 transition">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-12 h-12 bg-purple-600/20 rounded-full flex items-center justify-center">
+                                                <span class="text-xl font-bold text-purple-400">B</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-semibold text-white">Branch Kenya</h4>
+                                                <p class="text-xs text-gray-400">Flexible Repayment</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 bg-purple-600/20 text-purple-400 text-xs rounded-full">Trusted</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm mb-3">
+                                        <span class="text-gray-400">Up to KES 70,000</span>
+                                        <span class="text-purple-400">1-3%/day</span>
+                                    </div>
+                                    <button onclick="connectToLender('branch')" class="w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition">
+                                        Connect Now
+                                    </button>
+                                </div>
+                                
+                                <div class="bg-gray-800/60 rounded-xl p-4 border border-yellow-600/30 hover:border-yellow-500 transition">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-12 h-12 bg-teal-600/20 rounded-full flex items-center justify-center">
+                                                <span class="text-xl font-bold text-teal-400">Z</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-semibold text-white">Zenka Finance</h4>
+                                                <p class="text-xs text-gray-400">Quick Cash Loans</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 bg-teal-600/20 text-teal-400 text-xs rounded-full">Fast Approval</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm mb-3">
+                                        <span class="text-gray-400">Up to KES 30,000</span>
+                                        <span class="text-teal-400">9%/month</span>
+                                    </div>
+                                    <button onclick="connectToLender('zenka')" class="w-full py-2 bg-teal-600 hover:bg-teal-700 rounded-lg text-sm font-medium transition">
+                                        Connect Now
+                                    </button>
+                                </div>
+                                
+                                <div class="bg-gray-800/60 rounded-xl p-4 border border-yellow-600/30 hover:border-yellow-500 transition">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-12 h-12 bg-cyan-600/20 rounded-full flex items-center justify-center">
+                                                <span class="text-xl font-bold text-cyan-400">O</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-semibold text-white">OPesa Loans</h4>
+                                                <p class="text-xs text-gray-400">Emergency Loans</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 bg-cyan-600/20 text-cyan-400 text-xs rounded-full">Quick Access</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm mb-3">
+                                        <span class="text-gray-400">Up to KES 25,000</span>
+                                        <span class="text-cyan-400">8%/month</span>
+                                    </div>
+                                    <button onclick="connectToLender('opesa')" class="w-full py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg text-sm font-medium transition">
+                                        Connect Now
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-4 text-center">Your credit profile will be shared with selected lenders for instant loan processing. Expect contact within 24 hours.</p>
+                        </div>
+                        
+                        <div id="direct-lenders-locked" class="locked-overlay min-h-[250px] bg-gray-800/50 rounded-lg flex items-center justify-center">
+                            <div class="lock-icon text-center px-4">
+                                <div class="w-16 h-16 bg-yellow-600/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                    </svg>
+                                </div>
+                                <p class="text-white font-semibold text-lg">Golden Package Exclusive</p>
+                                <p class="text-gray-300 text-sm mt-2">Connect directly with verified loan lenders</p>
+                                <p class="text-gray-400 text-xs mt-1">Get instant loan approvals based on your credit score</p>
+                                <button onclick="showGoldenUpgradeModal('lenders')" class="mt-4 px-6 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg text-sm font-semibold transition">
+                                    Upgrade to Golden - KES 499
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="download-report-section" class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-blue-900/50 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-semibold">Download Full Report</h3>
+                            </div>
+                            <span id="download-badge" class="px-2 py-1 text-xs rounded-full"></span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-4">Download your complete CRB report as a PDF document for your records or to share with lenders.</p>
+                        
+                        <button id="download-report-btn" onclick="handleDownloadReport()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            <span>Download Full Report (PDF)</span>
+                        </button>
+                        
+                        <div id="download-locked-overlay" class="hidden mt-4 p-4 bg-yellow-900/30 border border-yellow-600/50 rounded-lg cursor-pointer hover:bg-yellow-900/50 transition" onclick="showGoldenUpgradeModal('download')">
+                            <div class="flex items-center space-x-3">
+                                <svg class="w-6 h-6 text-yellow-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                                <div class="flex-1">
+                                    <p class="text-yellow-400 font-medium text-sm">Golden Package Required</p>
+                                    <p class="text-gray-400 text-xs">Click to upgrade and download your full CRB report</p>
+                                </div>
+                                <button class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-xs font-semibold transition">
+                                    Upgrade
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                        <h3 class="text-lg font-semibold mb-4">Your Features</h3>
+                        <div id="features-list" class="space-y-3">
+                        </div>
+                    </div>
+
+                    <div id="upgrade-section" class="bg-gradient-to-br from-yellow-900/50 to-amber-900/50 rounded-2xl p-6 border border-yellow-700/50">
+                        <h3 class="text-lg font-semibold text-yellow-400 mb-2">Upgrade Your Package</h3>
+                        <p class="text-gray-300 text-sm mb-4">Unlock more features by upgrading to a higher tier</p>
+                        <div id="upgrade-options" class="space-y-3">
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                        <h3 class="text-lg font-semibold mb-4">Additional Features</h3>
+                        <div class="space-y-4">
+                            <div id="tips-feature" class="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700 transition" onclick="handleFeatureClick('tips')">
+                                <span class="text-sm">Credit Improvement Tips</span>
+                                <span class="feature-status"></span>
+                            </div>
+                            <div id="dispute-feature" class="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700 transition" onclick="handleFeatureClick('dispute')">
+                                <span class="text-sm">Dispute Assistance</span>
+                                <span class="feature-status"></span>
+                            </div>
+                            <div id="support-feature" class="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700 transition" onclick="handleFeatureClick('support')">
+                                <span class="text-sm">24/7 Priority Support</span>
+                                <span class="feature-status"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 text-center text-gray-500 text-sm">
+                <p>Report generated on <span id="report-date">---</span></p>
+                <p class="mt-1">Phone: <span id="user-phone">---</span></p>
+            </div>
+        </div>
+
+        <div id="upgrade-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-gray-800 rounded-2xl p-8 max-w-md w-full border border-gray-700">
+                <h3 class="text-xl font-bold mb-4">Upgrade Package</h3>
+                <p id="upgrade-info" class="text-gray-300 mb-6"></p>
+                <div class="space-y-4">
+                    <button id="confirm-upgrade" class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition">
+                        Pay & Upgrade
+                    </button>
+                    <button id="cancel-upgrade" class="w-full py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition">
+                        Cancel
+                    </button>
+                </div>
+                <div id="upgrade-status" class="mt-4 text-center text-sm hidden"></div>
+            </div>
+        </div>
+
+        <div id="golden-upgrade-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 max-w-md w-full border border-yellow-600/50">
+                <div class="flex items-center justify-center mb-4">
+                    <div class="w-16 h-16 bg-yellow-600/30 rounded-full flex items-center justify-center">
+                        <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="text-xl font-bold text-center text-yellow-400 mb-2">Upgrade to Golden Package</h3>
+                <p id="golden-upgrade-feature" class="text-gray-300 text-center mb-4 text-sm"></p>
+                
+                <div class="bg-gray-800/50 rounded-xl p-4 mb-6">
+                    <h4 class="text-sm font-semibold text-white mb-3">Golden Package Includes:</h4>
+                    <ul class="space-y-2 text-sm text-gray-300">
+                        <li class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            <span>Full CRB Status Report</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            <span>Credit History (12 Months)</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            <span>Detailed Credit Analysis</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            <span>Lender Recommendations</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            <span class="text-yellow-400 font-medium">Direct Loan Lender Connections</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            <span class="text-yellow-400 font-medium">Downloadable PDF Report</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            <span class="text-yellow-400 font-medium">24/7 Priority Support</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="text-center mb-4">
+                    <p class="text-gray-400 text-sm">Pay via M-Pesa</p>
+                    <p id="golden-upgrade-price" class="text-3xl font-bold text-yellow-400"></p>
+                </div>
+                
+                <div class="space-y-3">
+                    <button id="confirm-golden-upgrade" class="w-full py-3 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold transition flex items-center justify-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>Pay & Upgrade to Golden</span>
+                    </button>
+                    <button id="cancel-golden-upgrade" class="w-full py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition">
+                        Maybe Later
+                    </button>
+                </div>
+                <div id="golden-upgrade-status" class="mt-4 text-center text-sm hidden"></div>
+            </div>
+        </div>
+
+        <div id="lender-connect-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-gray-800 rounded-2xl p-8 max-w-md w-full border border-gray-700">
+                <div class="text-center mb-6">
+                    <div id="lender-modal-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"></div>
+                    <h3 id="lender-modal-name" class="text-xl font-bold"></h3>
+                    <p id="lender-modal-type" class="text-gray-400 text-sm"></p>
+                </div>
+                <div class="bg-gray-700/50 rounded-lg p-4 mb-6">
+                    <p class="text-sm text-gray-300 text-center">Your credit profile will be shared with this lender for instant loan assessment. You may receive a call or SMS within 24 hours.</p>
+                </div>
+                <div class="space-y-3">
+                    <button id="confirm-lender-connect" class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition">
+                        Confirm & Connect
+                    </button>
+                    <button id="cancel-lender-connect" class="w-full py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition">
+                        Cancel
+                    </button>
+                </div>
+                <div id="lender-connect-status" class="mt-4 text-center text-sm hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPhone = '';
+        let upgradeTarget = null;
+        let isLoading = false;
+        let pollingInterval = null;
+        let currentPackage = null;
+        let goldenUpgradeSource = null;
+        let selectedLender = null;
+        let currentReportData = null;
+
+        const lenderDetails = {
+            mshwari: { name: 'M-Shwari', type: 'Instant Mobile Loans', color: 'green', letter: 'M' },
+            tala: { name: 'Tala Kenya', type: 'Fast Approval Loans', color: 'blue', letter: 'T' },
+            branch: { name: 'Branch Kenya', type: 'Flexible Repayment', color: 'purple', letter: 'B' },
+            kcb: { name: 'KCB M-Pesa', type: 'Bank-backed Loans', color: 'orange', letter: 'K' },
+            zenka: { name: 'Zenka Finance', type: 'Quick Cash Loans', color: 'teal', letter: 'Z' },
+            opesa: { name: 'OPesa Loans', type: 'Emergency Loans', color: 'cyan', letter: 'O' },
+            fuliza: { name: 'Fuliza by Safaricom', type: 'Overdraft Facility', color: 'green', letter: 'F' },
+            equity: { name: 'Equity Bank EazzyLoan', type: 'Bank Loans', color: 'red', letter: 'E' }
+        };
+
+        function validatePhone(phone) {
+            const cleaned = phone.replace(/[\s\-\+]/g, '');
+            const patterns = [
+                /^0[17]\d{8}$/,
+                /^254[17]\d{8}$/,
+                /^\+254[17]\d{8}$/
+            ];
+            return patterns.some(p => p.test(cleaned));
+        }
+
+        function setButtonLoading(btn, loading, originalText = 'Access Dashboard') {
+            if (loading) {
+                btn.disabled = true;
+                btn.innerHTML = `<svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Loading...`;
+                btn.className = btn.className.replace('hover:bg-green-700', '').replace('hover:bg-yellow-700', '') + ' opacity-75 cursor-not-allowed';
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                btn.className = btn.className.replace('opacity-75 cursor-not-allowed', '');
+            }
+        }
+
+        document.getElementById('access-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const phone = document.getElementById('phone-input').value.trim();
+            const errorEl = document.getElementById('error-message');
+            const btn = e.target.querySelector('button[type="submit"]');
+            
+            if (!phone) {
+                errorEl.classList.remove('hidden');
+                errorEl.querySelector('p').textContent = 'Please enter your phone number';
+                return;
+            }
+
+            if (!validatePhone(phone)) {
+                errorEl.classList.remove('hidden');
+                errorEl.querySelector('p').textContent = 'Please enter a valid Kenyan phone number (e.g., 0712345678)';
+                return;
+            }
+
+            if (isLoading) return;
+            isLoading = true;
+            
+            setButtonLoading(btn, true);
+            currentPhone = phone;
+            await loadDashboard(phone);
+            setButtonLoading(btn, false, '<span>Access Dashboard</span><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>');
+            isLoading = false;
+        });
+
+        async function loadDashboard(phone) {
+            try {
+                const errorEl = document.getElementById('error-message');
+                errorEl.classList.add('hidden');
+
+                const accessResponse = await fetch('/api/user/access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone })
+                });
+                const accessData = await accessResponse.json();
+
+                if (!accessData.success) {
+                    throw new Error(accessData.error || 'Failed to check access');
+                }
+
+                if (!accessData.hasAccess) {
+                    errorEl.classList.remove('hidden');
+                    errorEl.querySelector('p').textContent = accessData.message;
+                    return;
+                }
+
+                const reportResponse = await fetch('/api/crb/report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone })
+                });
+                const reportData = await reportResponse.json();
+
+                if (!reportData.success) {
+                    throw new Error(reportData.error || 'Failed to load report');
+                }
+
+                displayDashboard(accessData, reportData);
+
+            } catch (error) {
+                const errorEl = document.getElementById('error-message');
+                errorEl.classList.remove('hidden');
+                errorEl.querySelector('p').textContent = error.message;
+            }
+        }
+
+        function displayDashboard(accessData, reportData) {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('dashboard-section').classList.remove('hidden');
+
+            const pkg = accessData.package;
+            const report = reportData.report;
+            const features = accessData.features;
+            const upgradeOptions = accessData.upgradeOptions;
+            
+            currentPackage = pkg;
+            currentReportData = reportData;
+
+            const badge = document.getElementById('package-badge');
+            badge.textContent = pkg.name;
+            if (pkg.id === 'golden') {
+                badge.className = 'px-4 py-2 rounded-full text-sm font-semibold bg-yellow-600 text-white';
+            } else if (pkg.id === 'premium') {
+                badge.className = 'px-4 py-2 rounded-full text-sm font-semibold bg-purple-600 text-white';
+            } else {
+                badge.className = 'px-4 py-2 rounded-full text-sm font-semibold bg-blue-600 text-white';
+            }
+
+            const score = report.creditScore || 0;
+            document.getElementById('credit-score').textContent = score;
+            const scorePercent = (score / 850) * 100;
+            document.querySelector('.score-ring').style.setProperty('--score', scorePercent);
+            
+            let scoreStatus = 'Poor';
+            let scoreColor = 'text-red-400';
+            if (score >= 700) { scoreStatus = 'Excellent'; scoreColor = 'text-green-400'; }
+            else if (score >= 650) { scoreStatus = 'Good'; scoreColor = 'text-blue-400'; }
+            else if (score >= 550) { scoreStatus = 'Fair'; scoreColor = 'text-yellow-400'; }
+            document.getElementById('score-status').textContent = scoreStatus;
+            document.getElementById('score-status').className = 'mt-1 ' + scoreColor;
+
+            const crbStatus = report.crbStatus || 'Unknown';
+            const statusEl = document.getElementById('crb-status');
+            statusEl.textContent = crbStatus;
+            if (crbStatus.includes('Good')) {
+                statusEl.className = 'text-xl font-bold text-green-400';
+            } else if (crbStatus.includes('Fair')) {
+                statusEl.className = 'text-xl font-bold text-yellow-400';
+            } else {
+                statusEl.className = 'text-xl font-bold text-red-400';
+            }
+
+            document.getElementById('loan-eligibility').textContent = report.loanEligibility || 'Not available';
+
+            if (report.creditHistoryLocked) {
+                document.getElementById('credit-history-content').classList.add('hidden');
+                document.getElementById('credit-history-locked').classList.remove('hidden');
+                document.getElementById('history-badge').textContent = 'Locked';
+                document.getElementById('history-badge').className = 'px-2 py-1 text-xs rounded-full bg-yellow-900/50 text-yellow-400';
+            } else if (report.creditHistory && report.creditHistory.length > 0) {
+                document.getElementById('credit-history-locked').classList.add('hidden');
+                document.getElementById('credit-history-content').classList.remove('hidden');
+                document.getElementById('history-badge').textContent = 'Unlocked';
+                document.getElementById('history-badge').className = 'px-2 py-1 text-xs rounded-full bg-green-900/50 text-green-400';
+                
+                const historyHtml = report.creditHistory.map(item => `
+                    <div class="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                        <div>
+                            <p class="font-medium">${item.lender}</p>
+                            <p class="text-xs text-gray-400">${item.date}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-semibold ${item.status === 'Paid' ? 'text-green-400' : 'text-yellow-400'}">${item.status}</p>
+                            <p class="text-sm text-gray-300">KES ${item.amount?.toLocaleString()}</p>
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('credit-history-content').innerHTML = historyHtml;
+            }
+
+            if (report.detailedAnalysisLocked) {
+                document.getElementById('detailed-analysis-content').classList.add('hidden');
+                document.getElementById('detailed-analysis-locked').classList.remove('hidden');
+                document.getElementById('analysis-badge').textContent = 'Locked';
+                document.getElementById('analysis-badge').className = 'px-2 py-1 text-xs rounded-full bg-yellow-900/50 text-yellow-400';
+            } else if (report.detailedAnalysis) {
+                document.getElementById('detailed-analysis-locked').classList.add('hidden');
+                document.getElementById('detailed-analysis-content').classList.remove('hidden');
+                document.getElementById('analysis-badge').textContent = 'Unlocked';
+                document.getElementById('analysis-badge').className = 'px-2 py-1 text-xs rounded-full bg-green-900/50 text-green-400';
+                
+                const analysis = report.detailedAnalysis;
+                const analysisHtml = `
+                    <div class="p-3 bg-gray-700/50 rounded-lg">
+                        <p class="text-xs text-gray-400">Payment Behavior</p>
+                        <p class="font-semibold">${analysis.payment_behavior || 'N/A'}</p>
+                    </div>
+                    <div class="p-3 bg-gray-700/50 rounded-lg">
+                        <p class="text-xs text-gray-400">Credit Utilization</p>
+                        <p class="font-semibold">${analysis.credit_utilization || 'N/A'}</p>
+                    </div>
+                    <div class="p-3 bg-gray-700/50 rounded-lg">
+                        <p class="text-xs text-gray-400">Account Age</p>
+                        <p class="font-semibold">${analysis.account_age || 'N/A'}</p>
+                    </div>
+                    <div class="p-3 bg-gray-700/50 rounded-lg">
+                        <p class="text-xs text-gray-400">Recent Inquiries</p>
+                        <p class="font-semibold">${analysis.inquiries || 'N/A'}</p>
+                    </div>
+                `;
+                document.getElementById('detailed-analysis-content').innerHTML = analysisHtml;
+            }
+
+            if (report.lenderRecommendationsLocked) {
+                document.getElementById('lender-content').classList.add('hidden');
+                document.getElementById('lender-locked').classList.remove('hidden');
+                document.getElementById('lender-badge').textContent = 'Locked';
+                document.getElementById('lender-badge').className = 'px-2 py-1 text-xs rounded-full bg-yellow-900/50 text-yellow-400';
+            } else if (report.lenderRecommendations && report.lenderRecommendations.length > 0) {
+                document.getElementById('lender-locked').classList.add('hidden');
+                document.getElementById('lender-content').classList.remove('hidden');
+                document.getElementById('lender-badge').textContent = 'Unlocked';
+                document.getElementById('lender-badge').className = 'px-2 py-1 text-xs rounded-full bg-green-900/50 text-green-400';
+                
+                const lenderHtml = report.lenderRecommendations.map(lender => `
+                    <div class="p-4 bg-gray-700/50 rounded-lg">
+                        <p class="font-semibold">${lender.name}</p>
+                        <p class="text-sm text-gray-400 mt-1">${lender.type}</p>
+                        <p class="text-green-400 text-sm mt-2">Up to KES ${lender.max_amount?.toLocaleString()}</p>
+                        <p class="text-xs text-gray-500 mt-1">${lender.interest_rate}</p>
+                    </div>
+                `).join('');
+                document.getElementById('lender-content').innerHTML = lenderHtml;
+            }
+
+            const featuresHtml = features.map(f => `
+                <div class="flex items-center justify-between p-3 ${f.unlocked ? 'bg-green-900/20' : 'bg-gray-700/50'} rounded-lg">
+                    <span class="text-sm">${f.label}</span>
+                    ${f.unlocked 
+                        ? '<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+                        : '<svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>'
+                    }
+                </div>
+            `).join('');
+            document.getElementById('features-list').innerHTML = featuresHtml;
+
+            updateFeatureStatus('tips-feature', !report.creditImprovementTipsLocked);
+            updateFeatureStatus('dispute-feature', !report.disputeAssistanceLocked);
+            updateFeatureStatus('support-feature', !report.prioritySupportLocked);
+
+            if (upgradeOptions && upgradeOptions.length > 0) {
+                document.getElementById('upgrade-section').classList.remove('hidden');
+                const upgradeHtml = upgradeOptions.map(opt => `
+                    <button onclick="initiateUpgrade('${opt.packageId}', '${opt.name}', ${opt.upgradeCost})"
+                        class="w-full p-3 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold transition text-left">
+                        <div class="flex justify-between items-center">
+                            <span>${opt.name}</span>
+                            <span>KES ${opt.upgradeCost}</span>
+                        </div>
+                        <p class="text-xs text-yellow-200 mt-1">Pay difference to upgrade</p>
+                    </button>
+                `).join('');
+                document.getElementById('upgrade-options').innerHTML = upgradeHtml;
+            } else {
+                document.getElementById('upgrade-section').classList.add('hidden');
+            }
+
+            document.getElementById('report-date').textContent = report.generatedAt || 'N/A';
+            document.getElementById('user-phone').textContent = report.phone || currentPhone;
+            
+            updateGoldenFeatures(pkg.id, report);
+        }
+
+        function updateFeatureStatus(elementId, unlocked) {
+            const el = document.getElementById(elementId);
+            const statusEl = el.querySelector('.feature-status');
+            if (unlocked) {
+                statusEl.innerHTML = '<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                el.classList.remove('border', 'border-yellow-600/30');
+            } else {
+                statusEl.innerHTML = '<svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>';
+                el.classList.add('border', 'border-yellow-600/30');
+            }
+        }
+
+        function handleFeatureClick(feature) {
+            if (!currentReportData || !currentReportData.report) return;
+            
+            const report = currentReportData.report;
+            let isLocked = false;
+            let featureText = '';
+            
+            if (feature === 'tips') {
+                isLocked = report.creditImprovementTipsLocked;
+                featureText = 'Get personalized tips to improve your credit score';
+            } else if (feature === 'dispute') {
+                isLocked = report.disputeAssistanceLocked;
+                featureText = 'Get help disputing errors on your credit report';
+            } else if (feature === 'support') {
+                isLocked = report.prioritySupportLocked;
+                featureText = 'Access 24/7 priority customer support';
+            }
+            
+            if (isLocked) {
+                showGoldenUpgradeModal(feature);
+            } else {
+                alert(`${feature === 'tips' ? 'Credit improvement tips' : feature === 'dispute' ? 'Dispute assistance' : 'Priority support'} is available! Contact us for more details.`);
+            }
+        }
+
+        function initiateUpgrade(packageId, packageName, cost) {
+            upgradeTarget = { packageId, packageName, cost };
+            document.getElementById('upgrade-info').textContent = 
+                `Upgrade to ${packageName} for KES ${cost}. An M-Pesa prompt will be sent to your phone.`;
+            document.getElementById('upgrade-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('cancel-upgrade').addEventListener('click', () => {
+            closeUpgradeModal();
+        });
+
+        document.getElementById('confirm-upgrade').addEventListener('click', async () => {
+            if (!upgradeTarget || isLoading) return;
+
+            const confirmBtn = document.getElementById('confirm-upgrade');
+            const cancelBtn = document.getElementById('cancel-upgrade');
+            const statusEl = document.getElementById('upgrade-status');
+            
+            isLoading = true;
+            setButtonLoading(confirmBtn, true, 'Pay & Upgrade');
+            cancelBtn.disabled = true;
+            cancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            statusEl.classList.remove('hidden');
+            statusEl.innerHTML = '<span class="flex items-center justify-center"><svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Initiating payment...</span>';
+            statusEl.className = 'mt-4 text-center text-sm text-yellow-400';
+
+            try {
+                const response = await fetch('/api/upgrade/initiate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: currentPhone,
+                        targetPackage: upgradeTarget.packageId
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    statusEl.innerHTML = '<span class="block">Check your phone for M-Pesa prompt</span><span class="block text-xs mt-1 text-gray-400">Waiting for payment confirmation...</span>';
+                    statusEl.className = 'mt-4 text-center text-sm text-green-400';
+                    
+                    if (data.checkoutRequestId) {
+                        startPollingStatus(data.checkoutRequestId);
+                    } else {
+                        setTimeout(() => {
+                            closeUpgradeModal();
+                            loadDashboard(currentPhone);
+                        }, 10000);
+                    }
+                } else {
+                    throw new Error(data.error || 'Upgrade failed');
+                }
+            } catch (error) {
+                statusEl.textContent = error.message;
+                statusEl.className = 'mt-4 text-center text-sm text-red-400';
+                resetUpgradeModal();
+            }
+        });
+
+        function startPollingStatus(checkoutId) {
+            let attempts = 0;
+            const maxAttempts = 30;
+            
+            if (pollingInterval) clearInterval(pollingInterval);
+            
+            pollingInterval = setInterval(async () => {
+                attempts++;
+                const statusEl = document.getElementById('upgrade-status');
+                
+                if (attempts > maxAttempts) {
+                    clearInterval(pollingInterval);
+                    statusEl.innerHTML = '<span class="block">Payment timed out</span><span class="block text-xs mt-1">Please try again or contact support</span>';
+                    statusEl.className = 'mt-4 text-center text-sm text-red-400';
+                    resetUpgradeModal();
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/payment/status/${checkoutId}`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        if (data.status === 'completed') {
+                            clearInterval(pollingInterval);
+                            statusEl.innerHTML = '<span class="flex items-center justify-center"><svg class="w-5 h-5 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Payment successful! Upgrading...</span>';
+                            statusEl.className = 'mt-4 text-center text-sm text-green-400';
+                            
+                            setTimeout(() => {
+                                closeUpgradeModal();
+                                loadDashboard(currentPhone);
+                            }, 2000);
+                        } else if (data.status === 'failed') {
+                            clearInterval(pollingInterval);
+                            statusEl.innerHTML = '<span class="block">Payment failed</span><span class="block text-xs mt-1">' + (data.resultDescription || 'Please try again') + '</span>';
+                            statusEl.className = 'mt-4 text-center text-sm text-red-400';
+                            resetUpgradeModal();
+                        }
+                    }
+                } catch (e) {
+                    console.error('Polling error:', e);
+                }
+            }, 3000);
+        }
+
+        function resetUpgradeModal() {
+            isLoading = false;
+            const confirmBtn = document.getElementById('confirm-upgrade');
+            const cancelBtn = document.getElementById('cancel-upgrade');
+            setButtonLoading(confirmBtn, false, 'Pay & Upgrade');
+            cancelBtn.disabled = false;
+            cancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        function closeUpgradeModal() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            document.getElementById('upgrade-modal').classList.add('hidden');
+            document.getElementById('upgrade-status').classList.add('hidden');
+            resetUpgradeModal();
+            upgradeTarget = null;
+        }
+
+        function showGoldenUpgradeModal(source) {
+            goldenUpgradeSource = source;
+            let featureText = '';
+            let price = 'KES 499';
+            
+            if (source === 'lenders') {
+                featureText = 'Unlock direct connections to verified loan lenders for instant approvals';
+            } else if (source === 'download') {
+                featureText = 'Download your complete CRB report as a PDF document';
+            } else if (source === 'history') {
+                featureText = 'View your full 12-month credit history to track your progress';
+            } else if (source === 'analysis') {
+                featureText = 'Get detailed credit analysis with payment behavior and utilization insights';
+            } else if (source === 'recommendations') {
+                featureText = 'Get personalized lender recommendations based on your credit profile';
+            } else if (source === 'tips') {
+                featureText = 'Get personalized tips to improve your credit score';
+            } else if (source === 'dispute') {
+                featureText = 'Get help disputing errors on your credit report';
+            } else if (source === 'support') {
+                featureText = 'Access 24/7 priority customer support';
+            } else {
+                featureText = 'Unlock all premium features with Golden Package';
+            }
+            
+            if (currentPackage) {
+                if (currentPackage.id === 'standard') {
+                    price = 'KES 400';
+                } else if (currentPackage.id === 'premium') {
+                    price = 'KES 200';
+                }
+            }
+            
+            document.getElementById('golden-upgrade-feature').textContent = featureText;
+            document.getElementById('golden-upgrade-price').textContent = price;
+            document.getElementById('golden-upgrade-modal').classList.remove('hidden');
+        }
+
+        function closeGoldenUpgradeModal() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            document.getElementById('golden-upgrade-modal').classList.add('hidden');
+            document.getElementById('golden-upgrade-status').classList.add('hidden');
+            resetGoldenUpgradeModal();
+            goldenUpgradeSource = null;
+        }
+
+        function resetGoldenUpgradeModal() {
+            isLoading = false;
+            const confirmBtn = document.getElementById('confirm-golden-upgrade');
+            const cancelBtn = document.getElementById('cancel-golden-upgrade');
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>Pay & Upgrade to Golden</span>';
+            cancelBtn.disabled = false;
+            cancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        document.getElementById('cancel-golden-upgrade').addEventListener('click', () => {
+            closeGoldenUpgradeModal();
+        });
+
+        document.getElementById('confirm-golden-upgrade').addEventListener('click', async () => {
+            if (isLoading) return;
+
+            const confirmBtn = document.getElementById('confirm-golden-upgrade');
+            const cancelBtn = document.getElementById('cancel-golden-upgrade');
+            const statusEl = document.getElementById('golden-upgrade-status');
+            
+            isLoading = true;
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...';
+            cancelBtn.disabled = true;
+            cancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            statusEl.classList.remove('hidden');
+            statusEl.innerHTML = '<span class="flex items-center justify-center"><svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Initiating payment...</span>';
+            statusEl.className = 'mt-4 text-center text-sm text-yellow-400';
+
+            try {
+                const response = await fetch('/api/upgrade/initiate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: currentPhone,
+                        targetPackage: 'golden'
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    statusEl.innerHTML = '<span class="block">Check your phone for M-Pesa prompt</span><span class="block text-xs mt-1 text-gray-400">Waiting for payment confirmation...</span>';
+                    statusEl.className = 'mt-4 text-center text-sm text-green-400';
+                    
+                    if (data.checkoutRequestId) {
+                        startGoldenPollingStatus(data.checkoutRequestId);
+                    } else if (data.transactionId) {
+                        startGoldenPollingStatus(data.transactionId);
+                    } else {
+                        setTimeout(() => {
+                            closeGoldenUpgradeModal();
+                            loadDashboard(currentPhone);
+                        }, 10000);
+                    }
+                } else {
+                    throw new Error(data.error || 'Upgrade failed');
+                }
+            } catch (error) {
+                statusEl.textContent = error.message;
+                statusEl.className = 'mt-4 text-center text-sm text-red-400';
+                resetGoldenUpgradeModal();
+            }
+        });
+
+        function startGoldenPollingStatus(checkoutId) {
+            let attempts = 0;
+            const maxAttempts = 30;
+            
+            if (pollingInterval) clearInterval(pollingInterval);
+            
+            pollingInterval = setInterval(async () => {
+                attempts++;
+                const statusEl = document.getElementById('golden-upgrade-status');
+                
+                if (attempts > maxAttempts) {
+                    clearInterval(pollingInterval);
+                    statusEl.innerHTML = '<span class="block">Payment timed out</span><span class="block text-xs mt-1">Please try again or contact support</span>';
+                    statusEl.className = 'mt-4 text-center text-sm text-red-400';
+                    resetGoldenUpgradeModal();
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/functions/v1/check-payment-status', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ transactionId: checkoutId })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success && data.payment) {
+                        if (data.payment.status === 'completed') {
+                            clearInterval(pollingInterval);
+                            statusEl.innerHTML = '<span class="flex items-center justify-center"><svg class="w-5 h-5 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Upgraded to Golden!</span>';
+                            statusEl.className = 'mt-4 text-center text-sm text-green-400';
+                            
+                            setTimeout(() => {
+                                closeGoldenUpgradeModal();
+                                loadDashboard(currentPhone);
+                            }, 2000);
+                        } else if (data.payment.status === 'failed') {
+                            clearInterval(pollingInterval);
+                            statusEl.innerHTML = '<span class="block">Payment failed</span><span class="block text-xs mt-1">' + (data.payment.resultDesc || 'Please try again') + '</span>';
+                            statusEl.className = 'mt-4 text-center text-sm text-red-400';
+                            resetGoldenUpgradeModal();
+                        }
+                    }
+                } catch (e) {
+                    console.error('Polling error:', e);
+                }
+            }, 3000);
+        }
+
+        function handleDownloadReport() {
+            if (!currentReportData || !currentReportData.report || currentReportData.report.downloadReportLocked) {
+                showGoldenUpgradeModal('download');
+                document.getElementById('download-locked-overlay').classList.remove('hidden');
+                return;
+            }
+            
+            downloadReport();
+        }
+
+        async function downloadReport() {
+            if (!currentReportData) {
+                alert('No report data available');
+                return;
+            }
+            
+            const btn = document.getElementById('download-report-btn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generating PDF...';
+            
+            try {
+                const response = await fetch('/api/crb/download-report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: currentPhone })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `CRB_Report_${currentPhone}_${new Date().toISOString().split('T')[0]}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                } else {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Failed to download report');
+                }
+            } catch (error) {
+                alert('Error downloading report: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+
+        function connectToLender(lenderId) {
+            if (!currentReportData || !currentReportData.report || currentReportData.report.directLendersLocked) {
+                showGoldenUpgradeModal('lenders');
+                return;
+            }
+            
+            selectedLender = lenderId;
+            const lender = lenderDetails[lenderId];
+            
+            document.getElementById('lender-modal-icon').className = `w-16 h-16 bg-${lender.color}-600/20 rounded-full flex items-center justify-center mx-auto mb-4`;
+            document.getElementById('lender-modal-icon').innerHTML = `<span class="text-2xl font-bold text-${lender.color}-400">${lender.letter}</span>`;
+            document.getElementById('lender-modal-name').textContent = lender.name;
+            document.getElementById('lender-modal-type').textContent = lender.type;
+            document.getElementById('lender-connect-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('cancel-lender-connect').addEventListener('click', () => {
+            document.getElementById('lender-connect-modal').classList.add('hidden');
+            selectedLender = null;
+        });
+
+        document.getElementById('confirm-lender-connect').addEventListener('click', async () => {
+            if (!selectedLender || isLoading) return;
+            
+            const confirmBtn = document.getElementById('confirm-lender-connect');
+            const statusEl = document.getElementById('lender-connect-status');
+            
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Connecting...';
+            
+            statusEl.classList.remove('hidden');
+            statusEl.innerHTML = 'Connecting to lender...';
+            statusEl.className = 'mt-4 text-center text-sm text-yellow-400';
+            
+            try {
+                const response = await fetch('/api/lender/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: currentPhone,
+                        lenderId: selectedLender
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusEl.innerHTML = '<span class="flex items-center justify-center"><svg class="w-5 h-5 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Connected! Expect contact soon.</span>';
+                    statusEl.className = 'mt-4 text-center text-sm text-green-400';
+                    
+                    setTimeout(() => {
+                        document.getElementById('lender-connect-modal').classList.add('hidden');
+                        statusEl.classList.add('hidden');
+                        confirmBtn.disabled = false;
+                        confirmBtn.innerHTML = 'Confirm & Connect';
+                        selectedLender = null;
+                    }, 3000);
+                } else {
+                    throw new Error(data.error || 'Connection failed');
+                }
+            } catch (error) {
+                statusEl.textContent = error.message;
+                statusEl.className = 'mt-4 text-center text-sm text-red-400';
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = 'Confirm & Connect';
+            }
+        });
+
+        function updateGoldenFeatures(packageId, report) {
+            const hasDirectLenders = report && !report.directLendersLocked;
+            const hasDownloadReport = report && !report.downloadReportLocked;
+            
+            if (hasDirectLenders) {
+                document.getElementById('direct-lenders-content').classList.remove('hidden');
+                document.getElementById('direct-lenders-locked').classList.add('hidden');
+                document.getElementById('direct-lenders-badge').textContent = 'UNLOCKED';
+                document.getElementById('direct-lenders-badge').className = 'px-2 py-1 text-xs rounded-full bg-green-600 text-white';
+            } else {
+                document.getElementById('direct-lenders-content').classList.add('hidden');
+                document.getElementById('direct-lenders-locked').classList.remove('hidden');
+                document.getElementById('direct-lenders-badge').textContent = 'GOLDEN EXCLUSIVE';
+                document.getElementById('direct-lenders-badge').className = 'px-2 py-1 text-xs rounded-full bg-yellow-600 text-white';
+            }
+            
+            if (hasDownloadReport) {
+                document.getElementById('download-badge').textContent = 'Available';
+                document.getElementById('download-badge').className = 'px-2 py-1 text-xs rounded-full bg-green-900/50 text-green-400';
+                document.getElementById('download-locked-overlay').classList.add('hidden');
+                document.getElementById('download-report-btn').className = 'w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition flex items-center justify-center space-x-2';
+                document.getElementById('download-report-btn').innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg><span>Download Full Report (PDF)</span>';
+            } else {
+                document.getElementById('download-badge').textContent = 'Golden Only';
+                document.getElementById('download-badge').className = 'px-2 py-1 text-xs rounded-full bg-yellow-900/50 text-yellow-400';
+                document.getElementById('download-locked-overlay').classList.remove('hidden');
+                document.getElementById('download-report-btn').className = 'w-full py-3 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold transition flex items-center justify-center space-x-2';
+                document.getElementById('download-report-btn').innerHTML = '<svg class="w-5 h-5 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg><span>Upgrade to Download Report</span>';
+            }
+        }
+    </script>
+</body>
+</html>
